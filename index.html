@@ -130,6 +130,8 @@ body{background:var(--cr);font-family:var(--ff);color:var(--t);max-width:480px;m
   <button class="tb on" onclick="switchTab('list')">Lista</button>
   <button class="tb" id="tmb" onclick="switchTab('menu')">Ementa</button>
   <button class="tb" onclick="switchTab('base')">Listas Base</button>
+  <button class="tb" onclick="switchTab('outras')">Outras compras</button>
+  <button class="tb" onclick="switchTab('wish')">Wishlist</button>
 </div>
 <div id="body">
   <div id="tp-list" class="tp on">
@@ -169,6 +171,22 @@ body{background:var(--cr);font-family:var(--ff);color:var(--t);max-width:480px;m
   <div id="tp-base" class="tp">
     <button class="bp" onclick="openBM(null)" style="margin-bottom:12px;">+ Nova Lista Base</button>
     <div id="bl"></div>
+  </div>
+  <div id="tp-outras" class="tp">
+    <input class="inpf" id="opCat" placeholder="Categoria" list="opCatList" style="margin-bottom:8px;"/>
+    <datalist id="opCatList"></datalist>
+    <input class="inpf" id="opCompra" placeholder="Compra" style="margin-bottom:8px;"/>
+    <input class="inpf" id="opLink" placeholder="Link (opcional)" style="margin-bottom:8px;"/>
+    <button class="bp" onclick="addOutra()">+ Adicionar compra</button>
+    <div id="opl" style="margin-top:16px;"></div>
+  </div>
+  <div id="tp-wish" class="tp">
+    <input class="inpf" id="wsCat" placeholder="Categoria" list="wsCatList" style="margin-bottom:8px;"/>
+    <datalist id="wsCatList"></datalist>
+    <input class="inpf" id="wsCompra" placeholder="Compra" style="margin-bottom:8px;"/>
+    <input class="inpf" id="wsLink" placeholder="Link (opcional)" style="margin-bottom:8px;"/>
+    <button class="bp" onclick="addWish()">+ Adicionar à wishlist</button>
+    <div id="wsl" style="margin-top:16px;"></div>
   </div>
 </div>
 
@@ -352,7 +370,7 @@ function setSyn(on,st){
   else{d.style.background='var(--gm)';d.className='';d.title='Sincronizado';}
 }
 
-var list=[],tpls=[],known=[],dishes=[],slots=[];
+var list=[],tpls=[],known=[],dishes=[],slots=[],outras=[],wish=[];
 var colC={},colD={},acH=-1,acS=[],eid=null;
 var deid=null,dit=[],slid=null,slit=[],addDay=null,beid=null,bit=[],abit=[];
 var ev='plan';
@@ -388,11 +406,11 @@ async function init(){
     var res=await Promise.all([
       sb.get('shopping_list'),sb.get('base_templates'),
       sbq('known_items?order=used_at.desc&limit=200'),
-      sb.get('dishes'),sb.get('menu_slots')
+      sb.get('dishes'),sb.get('menu_slots'),sb.get('other_purchases'),sb.get('wishlist')
     ]);
     list=res[0]||[];tpls=res[1]||[];
     known=(res[2]||[]).map(function(r){return r.name;});
-    dishes=res[3]||[];slots=res[4]||[];
+    dishes=res[3]||[];slots=res[4]||[];outras=res[5]||[];wish=res[6]||[];
   }catch(e){console.error('Init error',e);}
   document.getElementById('loader').style.display='none';
   renderList();
@@ -402,12 +420,14 @@ function switchTab(id){
   document.querySelectorAll('.tp').forEach(function(p){p.classList.remove('on');});
   document.querySelectorAll('.tb').forEach(function(b){b.classList.remove('on');});
   document.getElementById('tp-'+id).classList.add('on');
-  var tabs=['list','menu','base'];
+  var tabs=['list','menu','base','outras','wish'];
   var btns=document.querySelectorAll('.tb');
   tabs.forEach(function(t,i){if(t===id)btns[i].classList.add('on');});
   if(id==='list')renderList();
   if(id==='menu')renderEmenta();
   if(id==='base')renderBase();
+  if(id==='outras')renderOutras();
+  if(id==='wish')renderWish();
 }
 
 async function addItem(){
@@ -802,6 +822,94 @@ async function delDish(id){
   await sb.del('dishes',id);renderDishes();renderPlan();
 }
 
+async function addOutra(){
+  var cat=document.getElementById('opCat').value.trim();
+  var compra=document.getElementById('opCompra').value.trim();
+  var link=document.getElementById('opLink').value.trim();
+  if(!cat||!compra)return;
+  var id=Date.now()+Math.floor(Math.random()*1000);
+  var rows=await sb.ins('other_purchases',{id:id,cat:cat,compra:compra,link:link});
+  var row=(rows&&rows[0])||{id:id,cat:cat,compra:compra,link:link};
+  outras.push(row);
+  document.getElementById('opCat').value='';
+  document.getElementById('opCompra').value='';
+  document.getElementById('opLink').value='';
+  renderOutras();
+}
+async function remOutra(id){
+  outras=outras.filter(function(x){return x.id!==id;});
+  renderOutras();
+  await sb.del('other_purchases',id);
+}
+function renderOutras(){
+  var dl=document.getElementById('opCatList');
+  var cats=[];
+  outras.forEach(function(it){if(cats.indexOf(it.cat)===-1)cats.push(it.cat);});
+  dl.innerHTML=cats.map(function(c){return '<option value="'+h(c)+'"></option>';}).join('');
+  var byC={};
+  outras.forEach(function(it){var c=it.cat||'Outros';if(!byC[c])byC[c]=[];byC[c].push(it);});
+  var sortedCats=Object.keys(byC).sort(function(a,b){return a.localeCompare(b,'pt');});
+  var el=document.getElementById('opl');
+  if(!sortedCats.length){el.innerHTML='<div class="empty">Ainda não há compras adicionadas.</div>';return;}
+  el.innerHTML='';
+  sortedCats.forEach(function(c){
+    var sec=document.createElement('div');
+    var hd=document.createElement('div');hd.className='ch';hd.textContent=c;
+    sec.appendChild(hd);
+    byC[c].sort(function(a,b){return (a.compra||'').localeCompare(b.compra||'','pt');}).forEach(function(it){
+      var row=document.createElement('div');row.className='it';
+      var linkHtml=it.link?'<a href="'+h(it.link)+'" target="_blank" rel="noopener" style="font-size:11px;color:var(--gm);display:block;word-break:break-all;">'+h(it.link)+'</a>':'';
+      row.innerHTML='<div class="itn">'+h(it.compra)+linkHtml+'</div>'+
+        '<button class="bt" style="color:var(--s);" onclick="remOutra('+it.id+')">Apagar</button>';
+      sec.appendChild(row);
+    });
+    el.appendChild(sec);
+  });
+}
+async function addWish(){
+  var cat=document.getElementById('wsCat').value.trim();
+  var compra=document.getElementById('wsCompra').value.trim();
+  var link=document.getElementById('wsLink').value.trim();
+  if(!cat||!compra)return;
+  var id=Date.now()+Math.floor(Math.random()*1000);
+  var rows=await sb.ins('wishlist',{id:id,cat:cat,compra:compra,link:link});
+  var row=(rows&&rows[0])||{id:id,cat:cat,compra:compra,link:link};
+  wish.push(row);
+  document.getElementById('wsCat').value='';
+  document.getElementById('wsCompra').value='';
+  document.getElementById('wsLink').value='';
+  renderWish();
+}
+async function remWish(id){
+  wish=wish.filter(function(x){return x.id!==id;});
+  renderWish();
+  await sb.del('wishlist',id);
+}
+function renderWish(){
+  var dl=document.getElementById('wsCatList');
+  var cats=[];
+  wish.forEach(function(it){if(cats.indexOf(it.cat)===-1)cats.push(it.cat);});
+  dl.innerHTML=cats.map(function(c){return '<option value="'+h(c)+'"></option>';}).join('');
+  var byC={};
+  wish.forEach(function(it){var c=it.cat||'Outros';if(!byC[c])byC[c]=[];byC[c].push(it);});
+  var sortedCats=Object.keys(byC).sort(function(a,b){return a.localeCompare(b,'pt');});
+  var el=document.getElementById('wsl');
+  if(!sortedCats.length){el.innerHTML='<div class="empty">Ainda não há nada na wishlist.</div>';return;}
+  el.innerHTML='';
+  sortedCats.forEach(function(c){
+    var sec=document.createElement('div');
+    var hd=document.createElement('div');hd.className='ch';hd.textContent=c;
+    sec.appendChild(hd);
+    byC[c].sort(function(a,b){return (a.compra||'').localeCompare(b.compra||'','pt');}).forEach(function(it){
+      var row=document.createElement('div');row.className='it';
+      var linkHtml=it.link?'<a href="'+h(it.link)+'" target="_blank" rel="noopener" style="font-size:11px;color:var(--gm);display:block;word-break:break-all;">'+h(it.link)+'</a>':'';
+      row.innerHTML='<div class="itn">'+h(it.compra)+linkHtml+'</div>'+
+        '<button class="bt" style="color:var(--s);" onclick="remWish('+it.id+')">Apagar</button>';
+      sec.appendChild(row);
+    });
+    el.appendChild(sec);
+  });
+}
 function openM(id){document.getElementById(id).classList.add('on');}
 function closeM(id){document.getElementById(id).classList.remove('on');}
 document.querySelectorAll('.ov').forEach(function(o){
