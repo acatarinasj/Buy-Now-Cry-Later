@@ -519,10 +519,11 @@ async function clearDone(){
 async function saveIE(id){
   var n=document.getElementById('en-'+id).value.trim();
   var q=document.getElementById('eq-'+id).value.trim()||'1';
+  var lk=document.getElementById('el-'+id).value.trim();
   if(!n)return;
   var it=list.find(function(x){return x.id===id;});
-  if(it){it.name=n;it.qty=q;it.cat=gc(n);}
-  eid=null;await sb.upd('shopping_list',id,{name:n,qty:q,cat:gc(n)});renderList();
+  if(it){it.name=n;it.qty=q;it.cat=gc(n);it.link=lk;}
+  eid=null;await sb.upd('shopping_list',id,{name:n,qty:q,cat:gc(n),link:lk});renderList();
 }
 
 function renderList(){
@@ -567,15 +568,17 @@ function mkItem(it){
     var w=document.createElement('div');w.className='ite';
     w.innerHTML='<div class="ir"><input class="inp" id="en-'+it.id+'" value="'+h(it.name)+'"/>'+
       '<input class="inpq" id="eq-'+it.id+'" value="'+h(it.qty)+'"/></div>'+
+      '<input class="inpf" id="el-'+it.id+'" placeholder="Link (opcional)" value="'+h(it.link||'')+'" style="margin-bottom:7px;"/>'+
       '<div style="display:flex;gap:6px;">'+
       '<button class="ba" style="padding:7px 14px;font-size:12px;" onclick="saveIE('+it.id+')">Guardar</button>'+
       '<button class="ba" style="padding:7px 14px;font-size:12px;background:var(--b);color:var(--su);" onclick="eid=null;renderList();">Cancelar</button></div>';
     return w;
   }
   var el=document.createElement('div');el.className='it'+(it.done?' dn':'')+(it.priority?' hi':'');
+  var linkHtml=it.link?'<a href="'+h(it.link)+'" target="_blank" rel="noopener" style="font-size:11px;color:var(--gm);display:block;word-break:break-all;">'+h(it.link)+'</a>':'';
   el.innerHTML='<button class="ck'+(it.done?' dn':'')+'" onclick="toggleDone('+it.id+')"><span class="ckm">&#10003;</span></button>'+
     '<button class="pr'+(it.priority?' on':'')+'" onclick="togglePrio(\'shopping_list\',list,'+it.id+',renderList)" title="Prioritário">'+(it.priority?'&#9733;':'&#9734;')+'</button>'+
-    '<span class="itn">'+h(it.name)+'</span><span class="itq">'+h(it.qty)+'</span>'+
+    '<span class="itn">'+h(it.name)+linkHtml+'</span><span class="itq">'+h(it.qty)+'</span>'+
     (!it.done?'<button class="bt" style="color:var(--gm);" onclick="eid='+it.id+';renderList();">editar</button>':'')+
     '<button class="bt" style="color:var(--s);" onclick="remItem('+it.id+')">&#215;</button>';
   return el;
