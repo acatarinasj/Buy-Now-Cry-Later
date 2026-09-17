@@ -575,10 +575,10 @@ function mkItem(it){
     return w;
   }
   var el=document.createElement('div');el.className='it'+(it.done?' dn':'')+(it.priority?' hi':'');
-  var linkHtml=it.link?'<a href="'+h(it.link)+'" target="_blank" rel="noopener" style="font-size:11px;color:var(--gm);display:block;word-break:break-all;">'+h(it.link)+'</a>':'';
+  var nameHtml=it.link?'<a href="'+h(it.link)+'" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">'+h(it.name)+'</a>':h(it.name);
   el.innerHTML='<button class="ck'+(it.done?' dn':'')+'" onclick="toggleDone('+it.id+')"><span class="ckm">&#10003;</span></button>'+
     '<button class="pr'+(it.priority?' on':'')+'" onclick="togglePrio(\'shopping_list\',list,'+it.id+',renderList)" title="Prioritário">'+(it.priority?'&#9733;':'&#9734;')+'</button>'+
-    '<span class="itn">'+h(it.name)+linkHtml+'</span><span class="itq">'+h(it.qty)+'</span>'+
+    '<span class="itn">'+nameHtml+'</span><span class="itq">'+h(it.qty)+'</span>'+
     (!it.done?'<button class="bt" style="color:var(--gm);" onclick="eid='+it.id+';renderList();">editar</button>':'')+
     '<button class="bt" style="color:var(--s);" onclick="remItem('+it.id+')">&#215;</button>';
   return el;
@@ -898,9 +898,9 @@ function renderOutras(){
       return pd||(a.compra||'').localeCompare(b.compra||'','pt');
     }).forEach(function(it){
       var row=document.createElement('div');row.className='it'+(it.priority?' hi':'');
-      var linkHtml=it.link?'<a href="'+h(it.link)+'" target="_blank" rel="noopener" style="font-size:11px;color:var(--gm);display:block;word-break:break-all;">'+h(it.link)+'</a>':'';
+      var nameHtml=it.link?'<a href="'+h(it.link)+'" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">'+h(it.compra)+'</a>':h(it.compra);
       row.innerHTML='<button class="pr'+(it.priority?' on':'')+'" onclick="togglePrio(\'other_purchases\',outras,'+it.id+',renderOutras)" title="Prioritário">'+(it.priority?'&#9733;':'&#9734;')+'</button>'+
-        '<div class="itn">'+h(it.compra)+linkHtml+'</div>'+
+        '<div class="itn">'+nameHtml+'</div>'+
         '<button class="bt" style="color:var(--s);" onclick="remOutra('+it.id+')">Apagar</button>';
       sec.appendChild(row);
     });
@@ -946,9 +946,9 @@ function renderWish(){
       return pd||(a.compra||'').localeCompare(b.compra||'','pt');
     }).forEach(function(it){
       var row=document.createElement('div');row.className='it'+(it.priority?' hi':'');
-      var linkHtml=it.link?'<a href="'+h(it.link)+'" target="_blank" rel="noopener" style="font-size:11px;color:var(--gm);display:block;word-break:break-all;">'+h(it.link)+'</a>':'';
+      var nameHtml=it.link?'<a href="'+h(it.link)+'" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">'+h(it.compra)+'</a>':h(it.compra);
       row.innerHTML='<button class="pr'+(it.priority?' on':'')+'" onclick="togglePrio(\'wishlist\',wish,'+it.id+',renderWish)" title="Prioritário">'+(it.priority?'&#9733;':'&#9734;')+'</button>'+
-        '<div class="itn">'+h(it.compra)+linkHtml+'</div>'+
+        '<div class="itn">'+nameHtml+'</div>'+
         '<button class="bt" style="color:var(--s);" onclick="remWish('+it.id+')">Apagar</button>';
       sec.appendChild(row);
     });
