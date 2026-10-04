@@ -611,7 +611,7 @@ function renderAc(){
   });
   acS.forEach(function(s,i){
     var d=document.createElement('div');d.className='aci'+(i===acH?' hv':'');d.textContent=s;
-    d.onmousedown=(function(ss){return function(){acSel.push(ss);acH=-1;onNI();};})(s);
+    d.onmousedown=(function(ss){return function(){acSel.push(ss);acH=-1;document.getElementById('in').value=ss;onNI();};})(s);
     d.onmouseenter=(function(ii){return function(){acH=ii;renderAc();};})(i);
     box.appendChild(d);
   });
@@ -630,7 +630,7 @@ function onNK(e){
   if(acS.length&&e.key==='ArrowDown'){e.preventDefault();acH=Math.min(acH+1,acS.length-1);renderAc();}
   else if(acS.length&&e.key==='ArrowUp'){e.preventDefault();acH=Math.max(acH-1,-1);renderAc();}
   else if(e.key==='Enter'){
-    if(acH>=0){acSel.push(acS[acH]);acH=-1;onNI();}
+    if(acH>=0){var sel=acS[acH];acSel.push(sel);acH=-1;document.getElementById('in').value=sel;onNI();}
     else addItem();
   }
 }
