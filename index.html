@@ -54,6 +54,7 @@ body{background:var(--cr);font-family:var(--ff);color:var(--t);max-width:480px;m
   border:1px solid var(--b);border-radius:9px;box-shadow:0 6px 20px rgba(45,90,74,.13);overflow:hidden;display:none;}
 .aci{padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--cr);color:var(--t);}
 .aci:hover,.aci.hv{background:var(--gl);}
+.aci.sel{background:var(--g);color:var(--w);font-weight:600;}
 .ch{display:flex;align-items:center;gap:7px;padding:8px 0 4px;font-size:10px;font-weight:700;
   letter-spacing:1.4px;text-transform:uppercase;color:var(--gm);cursor:pointer;user-select:none;}
 .cb{background:var(--gl);color:var(--gm);border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;}
@@ -376,7 +377,7 @@ function setSyn(on,st){
 }
 
 var list=[],tpls=[],known=[],dishes=[],slots=[],outras=[],wish=[];
-var colC={},colD={},acH=-1,acS=[],eid=null;
+var colC={},colD={},acH=-1,acS=[],acSel=[],eid=null;
 var deid=null,dit=[],slid=null,slit=[],addDay=null,beid=null,bit=[],abit=[];
 var ev='plan';
 
@@ -459,7 +460,13 @@ function switchTab(id){
 async function addItem(){
   var name=document.getElementById('in').value.trim();
   var qty=document.getElementById('iq').value.trim()||'1';
+  await addItemNamed(name,qty);
+  document.getElementById('in').value='';document.getElementById('iq').value='1';
+  hideAc();renderList();
+}
+async function addItemNamed(name,qty){
   if(!name)return;
+  qty=qty||'1';
   var cat=gc(name);
   var ex=list.find(function(x){return x.name.toLowerCase()===name.toLowerCase();});
   if(ex){
@@ -472,8 +479,6 @@ async function addItem(){
     list.unshift(row||{id:id,name:name,qty:qty,done:false,cat:cat});
   }
   await addKnown(name);
-  document.getElementById('in').value='';document.getElementById('iq').value='1';
-  hideAc();renderList();
 }
 async function addKnown(n){
   if(!n||known.includes(n))return;
@@ -586,29 +591,55 @@ function mkItem(it){
 
 function onNI(){
   var v=document.getElementById('in').value;
-  if(v.length<2){hideAc();return;}
+  if(v.length<2){
+    acS=[];
+    if(acSel.length)renderAc();else hideAc();
+    return;
+  }
   var q=v.toLowerCase();
-  acS=known.filter(function(i){return i.toLowerCase().includes(q)&&i.toLowerCase()!==q;}).slice(0,5);
+  acS=known.filter(function(i){return i.toLowerCase().includes(q)&&i.toLowerCase()!==q&&acSel.indexOf(i)===-1;}).slice(0,5);
   renderAc();
 }
 function renderAc(){
   var box=document.getElementById('ac');
-  if(!acS.length){hideAc();return;}
+  if(!acS.length&&!acSel.length){hideAc();return;}
   box.style.display='block';box.innerHTML='';
+  acSel.forEach(function(s){
+    var d=document.createElement('div');d.className='aci sel';d.textContent='✓ '+s;
+    d.onmousedown=(function(ss){return function(){acSel=acSel.filter(function(x){return x!==ss;});acH=-1;onNI();};})(s);
+    box.appendChild(d);
+  });
   acS.forEach(function(s,i){
     var d=document.createElement('div');d.className='aci'+(i===acH?' hv':'');d.textContent=s;
-    d.onmousedown=(function(ss){return function(){document.getElementById('in').value=ss;hideAc();};})(s);
+    d.onmousedown=(function(ss){return function(){acSel.push(ss);acH=-1;onNI();};})(s);
     d.onmouseenter=(function(ii){return function(){acH=ii;renderAc();};})(i);
     box.appendChild(d);
   });
+  if(acSel.length){
+    var btn=document.createElement('button');btn.className='bp';
+    btn.style.margin='6px 8px';btn.style.width='calc(100% - 16px)';
+    btn.textContent='Adicionar '+acSel.length+' selecionado'+(acSel.length>1?'s':'');
+    btn.onmousedown=function(){addSelectedSuggestions();};
+    box.appendChild(btn);
+  }
 }
 function hideAc(){document.getElementById('ac').style.display='none';acS=[];acH=-1;}
-function onNF(){if(document.getElementById('in').value.length>=2)renderAc();}
+function onNF(){onNI();}
 function onNB(){setTimeout(hideAc,150);}
 function onNK(e){
   if(acS.length&&e.key==='ArrowDown'){e.preventDefault();acH=Math.min(acH+1,acS.length-1);renderAc();}
   else if(acS.length&&e.key==='ArrowUp'){e.preventDefault();acH=Math.max(acH-1,-1);renderAc();}
-  else if(e.key==='Enter'){if(acH>=0){document.getElementById('in').value=acS[acH];hideAc();}else addItem();}
+  else if(e.key==='Enter'){
+    if(acH>=0){acSel.push(acS[acH]);acH=-1;onNI();}
+    else addItem();
+  }
+}
+async function addSelectedSuggestions(){
+  var names=acSel.slice();acSel=[];
+  document.getElementById('in').value='';
+  hideAc();
+  for(var i=0;i<names.length;i++) await addItemNamed(names[i],'1');
+  renderList();
 }
 
 function openBM(tpl){
