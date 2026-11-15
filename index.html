@@ -527,11 +527,12 @@ async function clearDone(){
 async function saveIE(id){
   var n=document.getElementById('en-'+id).value.trim();
   var q=document.getElementById('eq-'+id).value.trim()||'1';
+  var cat=document.getElementById('ec-'+id).value;
   var lk=document.getElementById('el-'+id).value.trim();
   if(!n)return;
   var it=list.find(function(x){return x.id===id;});
-  if(it){it.name=n;it.qty=q;it.cat=gc(n);it.link=lk;}
-  eid=null;await sb.upd('shopping_list',id,{name:n,qty:q,cat:gc(n),link:lk});renderList();
+  if(it){it.name=n;it.qty=q;it.cat=cat;it.link=lk;}
+  eid=null;await sb.upd('shopping_list',id,{name:n,qty:q,cat:cat,link:lk});renderList();
 }
 
 function renderList(){
@@ -580,8 +581,10 @@ function renderList(){
 function mkItem(it){
   if(eid===it.id){
     var w=document.createElement('div');w.className='ite';
+    var catOpts=IC.map(function(c){return '<option value="'+c.id+'"'+((it.cat||gc(it.name))===c.id?' selected':'')+'>'+h(c.l)+'</option>';}).join('');
     w.innerHTML='<div class="ir"><input class="inp" id="en-'+it.id+'" value="'+h(it.name)+'"/>'+
       '<input class="inpq" id="eq-'+it.id+'" value="'+h(it.qty)+'"/></div>'+
+      '<select class="inps" id="ec-'+it.id+'" style="margin-bottom:7px;">'+catOpts+'</select>'+
       '<input class="inpf" id="el-'+it.id+'" placeholder="Link (opcional)" value="'+h(it.link||'')+'" style="margin-bottom:7px;"/>'+
       '<div style="display:flex;gap:6px;">'+
       '<button class="ba" style="padding:7px 14px;font-size:12px;" onclick="saveIE('+it.id+')">Guardar</button>'+
