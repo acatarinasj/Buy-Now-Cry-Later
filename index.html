@@ -184,6 +184,7 @@ body{background:var(--cr);font-family:var(--ff);color:var(--t);max-width:480px;m
     <input class="inpf" id="opCompra" placeholder="Compra" style="margin-bottom:8px;"/>
     <input class="inpf" id="opLink" placeholder="Link (opcional)" style="margin-bottom:8px;"/>
     <button class="bp" onclick="addOutra()">+ Adicionar compra</button>
+    <button class="tag" id="opFavBtn" onclick="favF.outras=!favF.outras;renderOutras();" style="margin-top:10px;">&#9733; Só favoritos</button>
     <div id="opl" style="margin-top:16px;"></div>
   </div>
   <div id="tp-wish" class="tp">
@@ -192,6 +193,7 @@ body{background:var(--cr);font-family:var(--ff);color:var(--t);max-width:480px;m
     <input class="inpf" id="wsCompra" placeholder="Compra" style="margin-bottom:8px;"/>
     <input class="inpf" id="wsLink" placeholder="Link (opcional)" style="margin-bottom:8px;"/>
     <button class="bp" onclick="addWish()">+ Adicionar à wishlist</button>
+    <button class="tag" id="wsFavBtn" onclick="favF.wish=!favF.wish;renderWish();" style="margin-top:10px;">&#9733; Só favoritos</button>
     <div id="wsl" style="margin-top:16px;"></div>
   </div>
 </div>
@@ -378,6 +380,7 @@ function setSyn(on,st){
 
 var list=[],tpls=[],known=[],dishes=[],slots=[],outras=[],wish=[];
 var colC={},colD={},acH=-1,acS=[],acSel=[],eid=null;
+var favF={list:false,outras:false,wish:false};
 var deid=null,dit=[],slid=null,slit=[],addDay=null,beid=null,bit=[],abit=[];
 var ev='plan';
 
@@ -534,14 +537,19 @@ async function saveIE(id){
 function renderList(){
   var pend=list.filter(function(x){return !x.done;});
   var done=list.filter(function(x){return x.done;});
+  var vpend=favF.list?pend.filter(function(x){return x.priority;}):pend;
+  var vdone=favF.list?done.filter(function(x){return x.priority;}):done;
   document.getElementById('pc').textContent=
     pend.length===0&&done.length===0?'Sem itens. Adiciona algo acima.':
-    pend.length+' item'+(pend.length!==1?'s':'')+' por comprar';
+    favF.list&&vpend.length===0&&vdone.length===0?'Sem favoritos nesta lista.':
+    vpend.length+' item'+(vpend.length!==1?'s':'')+' por comprar';
   var tc=document.getElementById('tpc');tc.innerHTML='';
   tpls.forEach(function(t){
     var b=document.createElement('button');b.className='tag';b.textContent=t.name;
     b.onclick=(function(tt){return function(){openABM(tt);};})(t);tc.appendChild(b);
   });
+  var fb=document.createElement('button');fb.className='tag'+(favF.list?' on':'');fb.innerHTML='&#9733; Só favoritos';
+  fb.onclick=function(){favF.list=!favF.list;renderList();};tc.appendChild(fb);
   if(done.length>0){
     var bd=document.createElement('button');bd.className='tag sal';bd.textContent='Limpar feitos';
     bd.onclick=clearDone;tc.appendChild(bd);
@@ -549,7 +557,7 @@ function renderList(){
   var rb=document.createElement('button');rb.className='tag';rb.id='refreshBtn';
   rb.title='Atualizar dados';rb.innerHTML='&#8635;';rb.onclick=refreshAll;tc.appendChild(rb);
   var byC={};
-  pend.forEach(function(it){var c=it.cat||gc(it.name);if(!byC[c])byC[c]=[];byC[c].push(it);});
+  vpend.forEach(function(it){var c=it.cat||gc(it.name);if(!byC[c])byC[c]=[];byC[c].push(it);});
   var aC=IC.filter(function(c){return byC[c.id]&&byC[c.id].length>0;});
   var lc=document.getElementById('lc');lc.innerHTML='';
   aC.forEach(function(cat){
@@ -563,8 +571,9 @@ function renderList(){
     if(!colC[cat.id])byC[cat.id].slice().sort(function(a,b){return (b.priority?1:0)-(a.priority?1:0);}).forEach(function(it){sec.appendChild(mkItem(it));});
     lc.appendChild(sec);
   });
+  if(favF.list&&!aC.length)lc.innerHTML='<div class="empty">Sem favoritos nesta lista.</div>';
   var ds=document.getElementById('lds'),dl=document.getElementById('ld');
-  if(done.length>0){ds.style.display='block';dl.innerHTML='';done.forEach(function(it){dl.appendChild(mkItem(it));});}
+  if(vdone.length>0){ds.style.display='block';dl.innerHTML='';vdone.forEach(function(it){dl.appendChild(mkItem(it));});}
   else ds.style.display='none';
   document.getElementById('tmb').textContent='Ementa'+(slots.length>0?' ('+slots.length+')':'');
 }
@@ -918,11 +927,13 @@ function renderOutras(){
   var cats=[];
   outras.forEach(function(it){if(cats.indexOf(it.cat)===-1)cats.push(it.cat);});
   dl.innerHTML=cats.map(function(c){return '<option value="'+h(c)+'"></option>';}).join('');
+  document.getElementById('opFavBtn').className='tag'+(favF.outras?' on':'');
+  var vOutras=favF.outras?outras.filter(function(x){return x.priority;}):outras;
   var byC={};
-  outras.forEach(function(it){var c=it.cat||'Outros';if(!byC[c])byC[c]=[];byC[c].push(it);});
+  vOutras.forEach(function(it){var c=it.cat||'Outros';if(!byC[c])byC[c]=[];byC[c].push(it);});
   var sortedCats=Object.keys(byC).sort(function(a,b){return a.localeCompare(b,'pt');});
   var el=document.getElementById('opl');
-  if(!sortedCats.length){el.innerHTML='<div class="empty">Ainda não há compras adicionadas.</div>';return;}
+  if(!sortedCats.length){el.innerHTML='<div class="empty">'+(favF.outras?'Sem favoritos.':'Ainda não há compras adicionadas.')+'</div>';return;}
   el.innerHTML='';
   sortedCats.forEach(function(c){
     var sec=document.createElement('div');
@@ -966,11 +977,13 @@ function renderWish(){
   var cats=[];
   wish.forEach(function(it){if(cats.indexOf(it.cat)===-1)cats.push(it.cat);});
   dl.innerHTML=cats.map(function(c){return '<option value="'+h(c)+'"></option>';}).join('');
+  document.getElementById('wsFavBtn').className='tag'+(favF.wish?' on':'');
+  var vWish=favF.wish?wish.filter(function(x){return x.priority;}):wish;
   var byC={};
-  wish.forEach(function(it){var c=it.cat||'Outros';if(!byC[c])byC[c]=[];byC[c].push(it);});
+  vWish.forEach(function(it){var c=it.cat||'Outros';if(!byC[c])byC[c]=[];byC[c].push(it);});
   var sortedCats=Object.keys(byC).sort(function(a,b){return a.localeCompare(b,'pt');});
   var el=document.getElementById('wsl');
-  if(!sortedCats.length){el.innerHTML='<div class="empty">Ainda não há nada na wishlist.</div>';return;}
+  if(!sortedCats.length){el.innerHTML='<div class="empty">'+(favF.wish?'Sem favoritos.':'Ainda não há nada na wishlist.')+'</div>';return;}
   el.innerHTML='';
   sortedCats.forEach(function(c){
     var sec=document.createElement('div');
