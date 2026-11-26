@@ -70,7 +70,8 @@ body{background:var(--cr);font-family:var(--ff);color:var(--t);max-width:480px;m
 .ite{display:flex;flex-direction:column;gap:7px;padding:10px 12px;background:var(--w);
   border-radius:10px;margin-bottom:5px;border:1.5px solid var(--g);}
 .ck{width:20px;height:20px;border-radius:5px;border:2px solid var(--b);background:none;
-  cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+  cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  transition:background .15s,border-color .15s;}
 .ck.dn{border-color:var(--g);background:var(--g);}
 .ckm{color:#fff;font-size:11px;font-weight:900;display:none;}
 .ck.dn .ckm{display:block;}
@@ -508,6 +509,11 @@ async function merge(ings){
 }
 async function toggleDone(id){
   var it=list.find(function(x){return x.id===id;});if(!it)return;
+  if(!it.done){
+    var ck=document.getElementById('ck-'+id);
+    if(ck)ck.classList.add('dn');
+    await new Promise(function(r){setTimeout(r,350);});
+  }
   it.done=!it.done;await sb.upd('shopping_list',id,{done:it.done});renderList();
 }
 async function togglePrio(table,arr,id,render){
@@ -593,7 +599,7 @@ function mkItem(it){
   }
   var el=document.createElement('div');el.className='it'+(it.done?' dn':'')+(it.priority?' hi':'');
   var nameHtml=it.link?'<a href="'+h(it.link)+'" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">'+h(it.name)+'</a>':h(it.name);
-  el.innerHTML='<button class="ck'+(it.done?' dn':'')+'" onclick="toggleDone('+it.id+')"><span class="ckm">&#10003;</span></button>'+
+  el.innerHTML='<button class="ck'+(it.done?' dn':'')+'" id="ck-'+it.id+'" onclick="toggleDone('+it.id+')"><span class="ckm">&#10003;</span></button>'+
     '<button class="pr'+(it.priority?' on':'')+'" onclick="togglePrio(\'shopping_list\',list,'+it.id+',renderList)" title="Prioritário">'+(it.priority?'&#9733;':'&#9734;')+'</button>'+
     '<span class="itn">'+nameHtml+'</span><span class="itq">'+h(it.qty)+'</span>'+
     (!it.done?'<button class="bt" style="color:var(--gm);" onclick="eid='+it.id+';renderList();">editar</button>':'')+
